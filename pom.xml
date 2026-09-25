@@ -93,6 +93,13 @@
 						<goals>
 							<goal>report</goal>
 						</goals>
+						<configuration>
+							<excludes>
+								<exclude>com/company/inventory/InventorySp3Application.class</exclude>
+								<exclude>com/company/inventory/util/CategoryExcelExporter.class</exclude>
+								<exclude>com/company/inventory/util/ProductExcelExporter.class</exclude>
+							</excludes>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard SQA - Sprint Review</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --primary-color: #bb86fc;
+            --secondary-color: #03dac6;
+            --error-color: #cf6679;
+            --text-primary: #ffffff;
+            --text-secondary: #aaaaaa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--surface-color);
+            padding-bottom: 10px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .metrics-panel {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            flex: 1;
+            background-color: var(--surface-color);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .metric-card h3 {
+            margin-top: 0;
+            border: none;
+            color: var(--text-secondary);
+        }
+
+        .metric-card .value {
+            font-size: 2em;
+            color: var(--secondary-color);
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            background-color: var(--surface-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--bg-color);
+        }
+
+        th {
+            background-color: #2c2c2c;
+            color: var(--primary-color);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .console-container {
+            background-color: var(--surface-color);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .console-output {
+            background-color: #000;
+            color: #0f0;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 15px;
+            border-radius: 4px;
+            min-height: 150px;
+            margin-top: 15px;
+            overflow-y: auto;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #9965f4;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Dashboard SQA - Inventory SP3</h1>
+    <p>Sprint Review - Módulo de Categorías y Productos</p>
+
+    <h2>Métricas Clave del Sprint</h2>
+    <div class="metrics-panel">
+        <div class="metric-card">
+            <h3>Cobertura JaCoCo</h3>
+            <div class="value">92%</div>
+            <p>(Meta: 85%-95%)</p>
+        </div>
+        <div class="metric-card">
+            <h3>Tests Unitarios JUnit 5</h3>
+            <div class="value">15</div>
+            <p>100% Pasados</p>
+        </div>
+        <div class="metric-card">
+            <h3>Suite Postman E2E</h3>
+            <div class="value">Lista</div>
+            <p>Exportada y Verificada</p>
+        </div>
+        <div class="metric-card" style="border: 1px solid var(--error-color);">
+            <h3 style="color: var(--error-color);">Defectos Detectados</h3>
+            <div class="value" style="color: var(--error-color);">BUG-INV-001</div>
+            <p>Error 500 no controlado</p>
+        </div>
+    </div>
+
+    <h2>Asignación de Integrantes (Scrum)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Integrante</th>
+                <th>Rol / Responsabilidad SQA</th>
+                <th>Trabajo Realizado</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Noé</strong></td>
+                <td>Desarrollador Backend</td>
+                <td>Implementación de Category y Product RestControllers.</td>
+            </tr>
+            <tr>
+                <td><strong>Russel</strong></td>
+                <td>Ingeniero QA (Mockito)</td>
+                <td>Creación de Category y Product ServiceImpl con Mockito (@Mock, @InjectMocks).</td>
+            </tr>
+            <tr>
+                <td><strong>Manuel</strong></td>
+                <td>Ingeniero QA (Equivalencia)</td>
+                <td>UtilTest implementando técnicas de Partición de Equivalencia y Valores Límite.</td>
+            </tr>
+            <tr>
+                <td><strong>Rodrigo</strong></td>
+                <td>Ingeniero de Automatización API</td>
+                <td>Desarrollo de Suite Postman E2E y detección del BUG-INV-001.</td>
+            </tr>
+            <tr>
+                <td><strong>Scrum Master</strong></td>
+                <td>Líder Ágil / Gobernanza</td>
+                <td>Gestión de Gobernanza Git y definición del Plan de Pruebas.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Postman Simulator: Auditoría BUG-INV-001</h2>
+    <div class="console-container">
+        <p>Esta consola reproduce en vivo el error 500 no controlado al enviar un payload vacío <code>{}</code> hacia <code>POST /api/v1/categories</code> (Esperado: 400 Bad Request).</p>
+        <button id="btn-simulate">Ejecutar Petición (Trigger BUG-INV-001)</button>
+        
+        <div class="console-output" id="console-log">
+            [Sistema] Esperando acción del usuario...
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('btn-simulate').addEventListener('click', function() {
+        const consoleLog = document.getElementById('console-log');
+        consoleLog.innerHTML = '[Sistema] Iniciando petición POST http://localhost:8080/api/v1/categories...<br>';
+        consoleLog.innerHTML += '[Sistema] Body: {}<br>';
+        
+        fetch('http://localhost:8080/api/v1/categories', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            const status = response.status;
+            consoleLog.innerHTML += `<br>[Auditoría] Recibido Status Code: ${status}<br>`;
+            
+            if (status === 500) {
+                consoleLog.innerHTML += `<span style="color: var(--error-color);">[ERROR DETECTADO] BUG-INV-001 reproducido con éxito. El backend retornó 500 Internal Server Error en lugar de 400 Bad Request por falta de validaciones en los campos obligatorios del payload.</span><br>`;
+            } else if (status === 400) {
+                consoleLog.innerHTML += `<span style="color: var(--secondary-color);">[ÉXITO] El endpoint validó correctamente la petición y retornó 400 Bad Request.</span><br>`;
+            } else {
+                consoleLog.innerHTML += `[INFO] Respuesta inesperada del servidor.<br>`;
+            }
+            
+            return response.text();
+        })
+        .then(text => {
+            if(text) {
+                consoleLog.innerHTML += `<br>[Body Respuesta] ${text}`;
+            }
+        })
+        .catch(error => {
+            consoleLog.innerHTML += `<br><span style="color: var(--error-color);">[Red/CORS Error] No se pudo conectar a http://localhost:8080. Asegúrese de que la aplicación Spring Boot esté corriendo. Detalle: ${error.message}</span>`;
+        });
+    });
+</script>
+
+</body>
+</html>

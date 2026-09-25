@@ -54,8 +54,7 @@ public class ProductServiceImplTest {
         product.setAccount(50);
         product.setCategory(category);
         
-        // Se asegura que al intentar descomprimir la imagen, la misma sea válida para evitar DataFormatException o NullPointerException
-        byte[] sampleImage = "test".getBytes();
+        byte[] sampleImage = "sample-data".getBytes();
         product.setPicture(Util.compressZLib(sampleImage));
     }
 
@@ -98,6 +97,17 @@ public class ProductServiceImplTest {
     }
 
     @Test
+    @DisplayName("Buscar producto por ID no existente - Retorna 404 NOT FOUND")
+    void testSearchById_NotFound() {
+        when(productDao.findById(99L)).thenReturn(Optional.empty());
+
+        ResponseEntity<ProductResponseRest> response = productService.searchById(99L);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(productDao, times(1)).findById(99L);
+    }
+
+    @Test
     @DisplayName("TC-PRD-04: Buscar producto por nombre - Retorna lista coincidente")
     void testSearchByName_Success() {
         List<Product> list = new ArrayList<>();
@@ -114,6 +124,17 @@ public class ProductServiceImplTest {
     }
 
     @Test
+    @DisplayName("Buscar producto por nombre sin coincidencias - Retorna 404 NOT FOUND")
+    void testSearchByName_NotFound() {
+        when(productDao.findByNameContainingIgnoreCase(anyString())).thenReturn(new ArrayList<>());
+
+        ResponseEntity<ProductResponseRest> response = productService.searchByName("Desconocido");
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(productDao, times(1)).findByNameContainingIgnoreCase("Desconocido");
+    }
+
+    @Test
     @DisplayName("TC-PRD-05: Eliminar producto por ID - Retorna 200 OK")
     void testDeleteById_Success() {
         doNothing().when(productDao).deleteById(10L);
@@ -122,5 +143,167 @@ public class ProductServiceImplTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(productDao, times(1)).deleteById(10L);
+    }
+
+    // -- Nuevos Test Negativos (Manejo de Excepciones para Cobertura del catch) --
+
+    @Test
+    @DisplayName("Guardar producto - Excepción en Base de Datos (Retorna 500 INTERNAL_SERVER_ERROR)")
+    void testSaveProduct_DatabaseError() {
+        when(categoryDao.findById(1L)).thenReturn(Optional.of(category));
+        when(productDao.save(any(Product.class))).thenThrow(new RuntimeException("DB Error"));
+
+        ResponseEntity<ProductResponseRest> response = productService.save(product, 1L);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        verify(categoryDao, times(1)).findById(1L);
+        verify(productDao, times(1)).save(any(Product.class));
+    }
+    
+    @Test
+    @DisplayName("Guardar producto fallido - Producto guardado es null (Retorna 400 BAD REQUEST)")
+    void testSaveProduct_NullSaved() {
+        when(categoryDao.findById(1L)).thenReturn(Optional.of(category));
+        when(productDao.save(any(Product.class))).thenReturn(null);
+
+        ResponseEntity<ProductResponseRest> response = productService.save(product, 1L);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(categoryDao, times(1)).findById(1L);
+        verify(productDao, times(1)).save(any(Product.class));
+    }
+
+    @Test
+    @DisplayName("Buscar producto por ID - Excepción en Base de Datos (Retorna 500 INTERNAL_SERVER_ERROR)")
+    void testSearchById_DatabaseError() {
+        when(productDao.findById(anyLong())).thenThrow(new RuntimeException("DB Error"));
+
+        ResponseEntity<ProductResponseRest> response = productService.searchById(10L);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        verify(productDao, times(1)).findById(10L);
+    }
+
+    @Test
+    @DisplayName("Buscar producto por nombre - Excepción en Base de Datos (Retorna 500 INTERNAL_SERVER_ERROR)")
+    void testSearchByName_DatabaseError() {
+        when(productDao.findByNameContainingIgnoreCase(anyString())).thenThrow(new RuntimeException("DB Error"));
+
+        ResponseEntity<ProductResponseRest> response = productService.searchByName("Teclado");
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        verify(productDao, times(1)).findByNameContainingIgnoreCase("Teclado");
+    }
+
+    @Test
+    @DisplayName("Eliminar producto por ID - Excepción en Base de Datos (Retorna 500 INTERNAL_SERVER_ERROR)")
+    void testDeleteById_DatabaseError() {
+        doThrow(new RuntimeException("DB Error")).when(productDao).deleteById(anyLong());
+
+        ResponseEntity<ProductResponseRest> response = productService.deleteById(10L);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        verify(productDao, times(1)).deleteById(10L);
+    }
+    
+    @Test
+    @DisplayName("Buscar todos los productos - Retorna 200 OK")
+    void testSearchAll_Success() {
+        List<Product> list = new ArrayList<>();
+        list.add(product);
+        when(productDao.findAll()).thenReturn(list);
+
+        ResponseEntity<ProductResponseRest> response = productService.search();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(productDao, times(1)).findAll();
+    }
+    
+    @Test
+    @DisplayName("Buscar todos los productos - Sin resultados (Retorna 404 NOT FOUND)")
+    void testSearchAll_NotFound() {
+        when(productDao.findAll()).thenReturn(new ArrayList<>());
+
+        ResponseEntity<ProductResponseRest> response = productService.search();
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(productDao, times(1)).findAll();
+    }
+
+    @Test
+    @DisplayName("Buscar todos los productos - Excepción en Base de Datos (Retorna 500 INTERNAL_SERVER_ERROR)")
+    void testSearchAll_DatabaseError() {
+        when(productDao.findAll()).thenThrow(new RuntimeException("DB Error"));
+
+        ResponseEntity<ProductResponseRest> response = productService.search();
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        verify(productDao, times(1)).findAll();
+    }
+
+    @Test
+    @DisplayName("Actualizar producto - Éxito (Retorna 200 OK)")
+    void testUpdateProduct_Success() {
+        when(categoryDao.findById(1L)).thenReturn(Optional.of(category));
+        when(productDao.findById(10L)).thenReturn(Optional.of(product));
+        when(productDao.save(any(Product.class))).thenReturn(product);
+
+        ResponseEntity<ProductResponseRest> response = productService.update(product, 1L, 10L);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(productDao, times(1)).findById(10L);
+        verify(productDao, times(1)).save(any(Product.class));
+    }
+    
+    @Test
+    @DisplayName("Actualizar producto - Category Not Found (Retorna 404 NOT FOUND)")
+    void testUpdateProduct_CategoryNotFound() {
+        when(categoryDao.findById(99L)).thenReturn(Optional.empty());
+
+        ResponseEntity<ProductResponseRest> response = productService.update(product, 99L, 10L);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(categoryDao, times(1)).findById(99L);
+        verify(productDao, never()).findById(anyLong());
+    }
+    
+    @Test
+    @DisplayName("Actualizar producto - Product Not Found (Retorna 404 NOT FOUND)")
+    void testUpdateProduct_ProductNotFound() {
+        when(categoryDao.findById(1L)).thenReturn(Optional.of(category));
+        when(productDao.findById(99L)).thenReturn(Optional.empty());
+
+        ResponseEntity<ProductResponseRest> response = productService.update(product, 1L, 99L);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(categoryDao, times(1)).findById(1L);
+        verify(productDao, times(1)).findById(99L);
+    }
+    
+    @Test
+    @DisplayName("Actualizar producto - Producto guardado es null (Retorna 400 BAD REQUEST)")
+    void testUpdateProduct_NullSaved() {
+        when(categoryDao.findById(1L)).thenReturn(Optional.of(category));
+        when(productDao.findById(10L)).thenReturn(Optional.of(product));
+        when(productDao.save(any(Product.class))).thenReturn(null);
+
+        ResponseEntity<ProductResponseRest> response = productService.update(product, 1L, 10L);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(productDao, times(1)).findById(10L);
+        verify(productDao, times(1)).save(any(Product.class));
+    }
+
+    @Test
+    @DisplayName("Actualizar producto - Excepción en Base de Datos (Retorna 500 INTERNAL_SERVER_ERROR)")
+    void testUpdateProduct_DatabaseError() {
+        when(categoryDao.findById(1L)).thenReturn(Optional.of(category));
+        when(productDao.findById(10L)).thenThrow(new RuntimeException("DB Error"));
+
+        ResponseEntity<ProductResponseRest> response = productService.update(product, 1L, 10L);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        verify(categoryDao, times(1)).findById(1L);
+        verify(productDao, times(1)).findById(10L);
     }
 }

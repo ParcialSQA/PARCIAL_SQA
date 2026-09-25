@@ -1,191 +1,598 @@
 package com.company.inventory.services;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import com.company.inventory.dao.ICategoryDao;
+import com.company.inventory.model.Category;
+import com.company.inventory.respnose.CategoryResponseRest;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-
-import com.company.inventory.dao.ICategoryDao;
-import com.company.inventory.model.Category;
-import com.company.inventory.respnose.CategoryResponseRest;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CategoryServiceImplTest {
 
+    @InjectMocks
+    private CategoryServiceImpl service;
+
     @Mock
     private ICategoryDao categoryDao;
 
-    @InjectMocks
-    private CategoryServiceImpl categoryService;
+    private List<Category> list;
+    private Category category1;
+    private Category category2;
 
+    @BeforeEach
+    void setUp() {
+
+        list = new ArrayList<>();
+
+        category1 = new Category();
+        category1.setId(1L);
+        category1.setName("Abarrotes");
+        category1.setDescription("Distintos tipos de abarrotes");
+
+        category2 = new Category();
+        category2.setId(2L);
+        category2.setName("Lacteos");
+        category2.setDescription("Distintos tipos de lacteos");
+
+        list.add(category1);
+        list.add(category2);
+    }
+
+    // =========================================================
+    // TEST SEARCH
+    // =========================================================
+
+    /**
+     * Caso positivo:
+     * Debe retornar todas las categorias correctamente.
+     */
     @Test
-    @DisplayName("Búsqueda exitosa de todas las categorías (testSearch_Success)")
     void testSearch_Success() {
-        // Arrange
-        List<Category> list = new ArrayList<>();
-        Category category = new Category();
-        category.setId(1L);
-        category.setName("Abarrotes");
-        category.setDescription("Productos de abarrotes");
-        list.add(category);
 
+        // Given
         when(categoryDao.findAll()).thenReturn(list);
 
-        // Act
-        ResponseEntity<CategoryResponseRest> response = categoryService.search();
+        // When
+        ResponseEntity<CategoryResponseRest> response = service.search();
 
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode(), "El status debe ser 200 OK");
-        assertNotNull(response.getBody(), "El cuerpo de la respuesta no debe ser nulo");
-        assertEquals("Respuesta exitosa", response.getBody().getMetadata().get(0).get("date"), "El mensaje de respuesta debe ser exitoso");
-        assertEquals(1, response.getBody().getCategoryResponse().getCategory().size(), "Debe retornar una lista de tamaño 1");
-        
+        // Then
+        assertNotNull(response);
+        assertNotNull(response.getBody());
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        assertEquals(
+                2,
+                response.getBody()
+                        .getCategoryResponse()
+                        .getCategory()
+                        .size()
+        );
+
+        assertEquals(
+                "Abarrotes",
+                response.getBody()
+                        .getCategoryResponse()
+                        .getCategory()
+                        .get(0)
+                        .getName()
+        );
+
+        assertEquals(
+                "Lacteos",
+                response.getBody()
+                        .getCategoryResponse()
+                        .getCategory()
+                        .get(1)
+                        .getName()
+        );
+
         verify(categoryDao, times(1)).findAll();
     }
 
+    /**
+     * Caso negativo:
+     * Simula una caída de base de datos.
+     */
     @Test
-    @DisplayName("Fallo en base de datos al buscar categorías (testSearch_DatabaseError)")
-    void testSearch_DatabaseError() {
-        // Arrange
-        when(categoryDao.findAll()).thenThrow(new RuntimeException("Database error"));
+    void testSearch_ExceptionError() {
 
-        // Act
-        ResponseEntity<CategoryResponseRest> response = categoryService.search();
+        // Given
+        when(categoryDao.findAll())
+                .thenThrow(new RuntimeException("DB Down"));
 
-        // Assert
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode(), "El status debe ser 500 INTERNAL_SERVER_ERROR");
-        assertEquals("Error al consultar", response.getBody().getMetadata().get(0).get("date"), "El mensaje debe coincidir con el error esperado");
-        
+        // When
+        ResponseEntity<CategoryResponseRest> response = service.search();
+
+        // Then
+        assertNotNull(response);
+        assertNotNull(response.getBody());
+
+        assertEquals(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                response.getStatusCode()
+        );
+
+        assertEquals(
+                "Respuesta nok",
+                response.getBody()
+                        .getMetadata()
+                        .get(0)
+                        .get("type")
+        );
+
         verify(categoryDao, times(1)).findAll();
     }
 
+    // =========================================================
+    // TEST SEARCH BY ID
+    // =========================================================
+
+    /**
+     * Caso positivo:
+     * Busca una categoria existente por ID.
+     */
     @Test
-    @DisplayName("Búsqueda exitosa de categoría por ID (testSearchById_Success)")
     void testSearchById_Success() {
-        // Arrange
-        Category category = new Category();
-        category.setId(1L);
-        category.setName("Abarrotes");
-        category.setDescription("Productos de abarrotes");
 
-        when(categoryDao.findById(1L)).thenReturn(Optional.of(category));
+        // Given
+        Long id = 1L;
 
-        // Act
-        ResponseEntity<CategoryResponseRest> response = categoryService.searchById(1L);
+        when(categoryDao.findById(id))
+                .thenReturn(Optional.of(category1));
 
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode(), "El status debe ser 200 OK");
-        assertEquals("Categoria encontrada", response.getBody().getMetadata().get(0).get("date"), "Debe indicar que la categoría fue encontrada");
-        assertEquals(1, response.getBody().getCategoryResponse().getCategory().size(), "La lista de la respuesta debe tener exactamente 1 elemento");
-        assertEquals("Abarrotes", response.getBody().getCategoryResponse().getCategory().get(0).getName(), "El nombre de la categoría debe coincidir");
-        
-        verify(categoryDao, times(1)).findById(1L);
+        // When
+        ResponseEntity<CategoryResponseRest> response =
+                service.searchById(id);
+
+        // Then
+        assertNotNull(response);
+        assertNotNull(response.getBody());
+
+        assertEquals(
+                HttpStatus.OK,
+                response.getStatusCode()
+        );
+
+        assertEquals(
+                1,
+                response.getBody()
+                        .getCategoryResponse()
+                        .getCategory()
+                        .size()
+        );
+
+        assertEquals(
+                1L,
+                response.getBody()
+                        .getCategoryResponse()
+                        .getCategory()
+                        .get(0)
+                        .getId()
+        );
+
+        assertEquals(
+                "Abarrotes",
+                response.getBody()
+                        .getCategoryResponse()
+                        .getCategory()
+                        .get(0)
+                        .getName()
+        );
+
+        verify(categoryDao, times(1)).findById(id);
     }
 
+    /**
+     * Caso negativo:
+     * La categoria buscada no existe.
+     */
     @Test
-    @DisplayName("Categoría por ID no encontrada (testSearchById_NotFound)")
     void testSearchById_NotFound() {
-        // Arrange
-        when(categoryDao.findById(99L)).thenReturn(Optional.empty());
 
-        // Act
-        ResponseEntity<CategoryResponseRest> response = categoryService.searchById(99L);
+        // Given
+        Long id = 99L;
 
-        // Assert
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode(), "El status debe ser 404 NOT_FOUND");
-        assertEquals("Categoria no encontrada", response.getBody().getMetadata().get(0).get("date"), "El mensaje debe indicar que no se encontró");
-        
-        verify(categoryDao, times(1)).findById(99L);
+        when(categoryDao.findById(id))
+                .thenReturn(Optional.empty());
+
+        // When
+        ResponseEntity<CategoryResponseRest> response =
+                service.searchById(id);
+
+        // Then
+        assertNotNull(response);
+        assertNotNull(response.getBody());
+
+        assertEquals(
+                HttpStatus.NOT_FOUND,
+                response.getStatusCode()
+        );
+
+        assertEquals(
+                "Respuesta nok",
+                response.getBody()
+                        .getMetadata()
+                        .get(0)
+                        .get("type")
+        );
+
+        verify(categoryDao, times(1)).findById(id);
     }
 
+    /**
+     * Caso negativo:
+     * Simula error de base de datos al buscar por ID.
+     */
     @Test
-    @DisplayName("Guardado exitoso de categoría (testSave_Success)")
+    void testSearchById_ExceptionError() {
+
+        // Given
+        Long id = 1L;
+
+        when(categoryDao.findById(id))
+                .thenThrow(new RuntimeException("DB Down"));
+
+        // When
+        ResponseEntity<CategoryResponseRest> response =
+                service.searchById(id);
+
+        // Then
+        assertNotNull(response);
+        assertNotNull(response.getBody());
+
+        assertEquals(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                response.getStatusCode()
+        );
+
+        assertEquals(
+                "Respuesta nok",
+                response.getBody()
+                        .getMetadata()
+                        .get(0)
+                        .get("type")
+        );
+
+        verify(categoryDao, times(1)).findById(id);
+    }
+
+    // =========================================================
+    // TEST SAVE
+    // =========================================================
+
+    /**
+     * Caso positivo:
+     * Guarda correctamente una categoria.
+     */
+    @Test
     void testSave_Success() {
-        // Arrange
-        Category categoryToSave = new Category();
-        categoryToSave.setName("Abarrotes");
-        categoryToSave.setDescription("Productos de abarrotes");
 
-        Category savedCategory = new Category();
-        savedCategory.setId(1L);
-        savedCategory.setName("Abarrotes");
-        savedCategory.setDescription("Productos de abarrotes");
+        // Given
+        Category category = new Category();
+        category.setId(3L);
+        category.setName("Bebidas");
+        category.setDescription("Distintos tipos de bebidas");
 
-        when(categoryDao.save(any(Category.class))).thenReturn(savedCategory);
+        when(categoryDao.save(any(Category.class)))
+                .thenReturn(category);
 
-        // Act
-        ResponseEntity<CategoryResponseRest> response = categoryService.save(categoryToSave);
+        // When
+        ResponseEntity<CategoryResponseRest> response =
+                service.save(category);
 
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode(), "El status debe ser 200 OK");
-        assertEquals("Categoria guardada", response.getBody().getMetadata().get(0).get("date"), "Debe indicar que la categoría fue guardada");
-        assertEquals(1L, response.getBody().getCategoryResponse().getCategory().get(0).getId(), "La categoría guardada debe poseer el ID retornado por la DB");
-        
-        verify(categoryDao, times(1)).save(any(Category.class));
+        // Then
+        assertNotNull(response);
+        assertNotNull(response.getBody());
+
+        assertEquals(
+                HttpStatus.OK,
+                response.getStatusCode()
+        );
+
+        assertEquals(
+                "Bebidas",
+                response.getBody()
+                        .getCategoryResponse()
+                        .getCategory()
+                        .get(0)
+                        .getName()
+        );
+
+        verify(categoryDao, times(1))
+                .save(any(Category.class));
     }
 
+    /**
+     * Caso negativo:
+     * DAO retorna null al intentar guardar.
+     */
     @Test
-    @DisplayName("Actualización exitosa de categoría (testUpdate_Success)")
+    void testSave_ReturnsNull() {
+
+        // Given
+        Category category = new Category();
+        category.setId(3L);
+        category.setName("Bebidas");
+        category.setDescription("Distintos tipos de bebidas");
+
+        when(categoryDao.save(any(Category.class)))
+                .thenReturn(null);
+
+        // When
+        ResponseEntity<CategoryResponseRest> response =
+                service.save(category);
+
+        // Then
+        assertNotNull(response);
+        assertNotNull(response.getBody());
+
+        assertEquals(
+                HttpStatus.BAD_REQUEST,
+                response.getStatusCode()
+        );
+
+        assertEquals(
+                "Respuesta nok",
+                response.getBody()
+                        .getMetadata()
+                        .get(0)
+                        .get("type")
+        );
+
+        verify(categoryDao, times(1))
+                .save(any(Category.class));
+    }
+
+    /**
+     * Caso negativo:
+     * Simula caída de BD al guardar.
+     */
+    @Test
+    void testSave_ExceptionError() {
+
+        // Given
+        Category category = new Category();
+        category.setId(3L);
+        category.setName("Bebidas");
+        category.setDescription("Distintos tipos de bebidas");
+
+        when(categoryDao.save(any(Category.class)))
+                .thenThrow(new RuntimeException("DB Down"));
+
+        // When
+        ResponseEntity<CategoryResponseRest> response =
+                service.save(category);
+
+        // Then
+        assertNotNull(response);
+        assertNotNull(response.getBody());
+
+        assertEquals(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                response.getStatusCode()
+        );
+
+        verify(categoryDao, times(1))
+                .save(any(Category.class));
+    }
+
+    // =========================================================
+    // TEST UPDATE
+    // =========================================================
+
+    /**
+     * Caso positivo:
+     * Actualiza correctamente una categoria existente.
+     */
+    @Test
     void testUpdate_Success() {
-        // Arrange
-        Category existingCategory = new Category();
-        existingCategory.setId(1L);
-        existingCategory.setName("Antiguo");
-        existingCategory.setDescription("Descripción antigua");
 
-        Category categoryUpdateReq = new Category();
-        categoryUpdateReq.setName("Nuevo Nombre");
-        categoryUpdateReq.setDescription("Nueva Descripción");
+        // Given
+        Long id = 1L;
 
-        Category categoryUpdated = new Category();
-        categoryUpdated.setId(1L);
-        categoryUpdated.setName("Nuevo Nombre");
-        categoryUpdated.setDescription("Nueva Descripción");
+        Category newData = new Category();
+        newData.setName("Abarrotes actualizados");
+        newData.setDescription("Descripcion actualizada");
 
-        when(categoryDao.findById(1L)).thenReturn(Optional.of(existingCategory));
-        when(categoryDao.save(any(Category.class))).thenReturn(categoryUpdated);
+        when(categoryDao.findById(id))
+                .thenReturn(Optional.of(category1));
 
-        // Act
-        ResponseEntity<CategoryResponseRest> response = categoryService.update(categoryUpdateReq, 1L);
+        when(categoryDao.save(any(Category.class)))
+                .thenAnswer(invocation ->
+                        invocation.getArgument(0)
+                );
 
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode(), "El status debe ser 200 OK");
-        assertEquals("Categoria actualizada", response.getBody().getMetadata().get(0).get("date"), "Debe indicar que la categoría fue actualizada");
-        assertEquals("Nuevo Nombre", response.getBody().getCategoryResponse().getCategory().get(0).getName(), "El nombre debe estar actualizado en la respuesta");
-        
-        verify(categoryDao, times(1)).findById(1L);
-        verify(categoryDao, times(1)).save(any(Category.class));
+        // When
+        ResponseEntity<CategoryResponseRest> response =
+                service.update(newData, id);
+
+        // Then
+        assertNotNull(response);
+        assertNotNull(response.getBody());
+
+        assertEquals(
+                HttpStatus.OK,
+                response.getStatusCode()
+        );
+
+        assertEquals(
+                "Abarrotes actualizados",
+                response.getBody()
+                        .getCategoryResponse()
+                        .getCategory()
+                        .get(0)
+                        .getName()
+        );
+
+        assertEquals(
+                "Descripcion actualizada",
+                response.getBody()
+                        .getCategoryResponse()
+                        .getCategory()
+                        .get(0)
+                        .getDescription()
+        );
+
+        verify(categoryDao, times(1)).findById(id);
+        verify(categoryDao, times(1))
+                .save(any(Category.class));
     }
 
+    /**
+     * Caso negativo:
+     * No debe guardar si la categoria no existe.
+     */
     @Test
-    @DisplayName("Eliminación exitosa de categoría por ID (testDeleteById_Success)")
+    void testUpdate_NotFound() {
+
+        // Given
+        Long id = 99L;
+
+        Category newData = new Category();
+        newData.setName("Nueva categoria");
+        newData.setDescription("Nueva descripcion");
+
+        when(categoryDao.findById(id))
+                .thenReturn(Optional.empty());
+
+        // When
+        ResponseEntity<CategoryResponseRest> response =
+                service.update(newData, id);
+
+        // Then
+        assertNotNull(response);
+        assertNotNull(response.getBody());
+
+        assertEquals(
+                HttpStatus.NOT_FOUND,
+                response.getStatusCode()
+        );
+
+        verify(categoryDao, times(1)).findById(id);
+
+        // IMPORTANTE:
+        // Si no encuentra la categoria NO debe guardar.
+        verify(categoryDao, never())
+                .save(any(Category.class));
+    }
+
+    /**
+     * Caso negativo:
+     * Simula error de BD antes de actualizar.
+     */
+    @Test
+    void testUpdate_ExceptionError() {
+
+        // Given
+        Long id = 1L;
+
+        Category newData = new Category();
+        newData.setName("Categoria actualizada");
+        newData.setDescription("Descripcion actualizada");
+
+        when(categoryDao.findById(id))
+                .thenThrow(new RuntimeException("DB Down"));
+
+        // When
+        ResponseEntity<CategoryResponseRest> response =
+                service.update(newData, id);
+
+        // Then
+        assertNotNull(response);
+
+        assertEquals(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                response.getStatusCode()
+        );
+
+        verify(categoryDao, times(1)).findById(id);
+
+        // Como falló antes de encontrar la categoria,
+        // nunca debe intentar guardar.
+        verify(categoryDao, never())
+                .save(any(Category.class));
+    }
+
+    // =========================================================
+    // TEST DELETE
+    // =========================================================
+
+    /**
+     * Caso positivo:
+     * Elimina correctamente una categoria.
+     */
+    @Test
     void testDeleteById_Success() {
-        // Arrange
-        doNothing().when(categoryDao).deleteById(1L);
 
-        // Act
-        ResponseEntity<CategoryResponseRest> response = categoryService.deleteById(1L);
+        // Given
+        Long id = 1L;
 
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode(), "El status debe ser 200 OK");
-        assertEquals("Registro eliminado", response.getBody().getMetadata().get(0).get("date"), "Debe indicar que el registro fue eliminado");
-        
-        verify(categoryDao, times(1)).deleteById(1L);
+        doNothing()
+                .when(categoryDao)
+                .deleteById(id);
+
+        // When
+        ResponseEntity<CategoryResponseRest> response =
+                service.deleteById(id);
+
+        // Then
+        assertNotNull(response);
+        assertNotNull(response.getBody());
+
+        assertEquals(
+                HttpStatus.OK,
+                response.getStatusCode()
+        );
+
+        verify(categoryDao, times(1))
+                .deleteById(id);
+    }
+
+    /**
+     * Caso negativo:
+     * Simula error de BD al eliminar.
+     */
+    @Test
+    void testDeleteById_ExceptionError() {
+
+        // Given
+        Long id = 1L;
+
+        doThrow(new RuntimeException("DB Down"))
+                .when(categoryDao)
+                .deleteById(id);
+
+        // When
+        ResponseEntity<CategoryResponseRest> response =
+                service.deleteById(id);
+
+        // Then
+        assertNotNull(response);
+        assertNotNull(response.getBody());
+
+        assertEquals(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                response.getStatusCode()
+        );
+
+        verify(categoryDao, times(1))
+                .deleteById(id);
     }
 }

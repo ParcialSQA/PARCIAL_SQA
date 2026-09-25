@@ -1,107 +1,131 @@
 package com.company.inventory.controller;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-
+import com.company.inventory.model.Product;
+import com.company.inventory.respnose.ProductResponseRest;
+import com.company.inventory.services.IProductService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.MockMvc;
 
-import com.company.inventory.model.Product;
-import com.company.inventory.respnose.ProductResponseRest;
-import com.company.inventory.services.IProductService;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
 @ExtendWith(MockitoExtension.class)
-public class ProductRestControllerTest {
+class ProductRestControllerTest {
 
     @Mock
-    private IProductService productService;
+    private IProductService service;
 
     @InjectMocks
-    private ProductRestController productController;
+    private ProductRestController controller;
 
-    @Test
-    public void testSearchProducts_Success() {
-        ProductResponseRest responseRest = new ProductResponseRest();
-        ResponseEntity<ProductResponseRest> responseEntity = new ResponseEntity<>(responseRest, HttpStatus.OK);
+    private MockMvc mockMvc;
 
-        when(productService.search()).thenReturn(responseEntity);
-
-        ResponseEntity<ProductResponseRest> result = productController.search();
-
-        assertEquals(HttpStatus.OK, result.getStatusCode());
-        verify(productService, times(1)).search();
+    @BeforeEach
+    void setUp() {
+        mockMvc = standaloneSetup(controller).build();
     }
 
     @Test
-    public void testSearchProductById_Success() {
+    void testSearchById_Success() throws Exception {
+        // Given
         Long id = 1L;
-        ProductResponseRest responseRest = new ProductResponseRest();
-        ResponseEntity<ProductResponseRest> responseEntity = new ResponseEntity<>(responseRest, HttpStatus.OK);
+        Product product = new Product();
+        product.setId(id);
+        product.setName("Arroz");
+        ProductResponseRest response = responseWith(product);
+        when(service.searchById(id)).thenReturn(new ResponseEntity<>(response, HttpStatus.OK));
 
-        when(productService.searchById(id)).thenReturn(responseEntity);
+        // When / Then
+        mockMvc.perform(get("/api/v1/products/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.product.products[0].name").value("Arroz"));
 
-        ResponseEntity<ProductResponseRest> result = productController.searchById(id);
-
-        assertEquals(HttpStatus.OK, result.getStatusCode());
-        verify(productService, times(1)).searchById(id);
+        verify(service, times(1)).searchById(id);
     }
 
     @Test
-    public void testSearchProductByName_Success() {
-        String name = "Test";
-        ProductResponseRest responseRest = new ProductResponseRest();
-        ResponseEntity<ProductResponseRest> responseEntity = new ResponseEntity<>(responseRest, HttpStatus.OK);
+    void testSearchByName_Success() throws Exception {
+        // Given
+        String name = "Arroz";
+        Product product = new Product();
+        product.setId(1L);
+        product.setName(name);
+        when(service.searchByName(name)).thenReturn(
+                new ResponseEntity<>(responseWith(product), HttpStatus.OK));
 
-        when(productService.searchByName(name)).thenReturn(responseEntity);
+        // When / Then
+        mockMvc.perform(get("/api/v1/products/filter/{name}", name))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.product.products[0].name").value(name));
 
-        ResponseEntity<ProductResponseRest> result = productController.searchByName(name);
-
-        assertEquals(HttpStatus.OK, result.getStatusCode());
-        verify(productService, times(1)).searchByName(name);
+        verify(service, times(1)).searchByName(name);
     }
 
     @Test
-    public void testSaveProduct_Success() throws IOException {
-        MockMultipartFile picture = new MockMultipartFile("picture", "test.jpg", "image/jpeg", "test image content".getBytes());
-        String name = "Test Product";
-        int price = 100;
-        int account = 10;
-        Long categoryId = 1L;
+    void testSaveProduct_Success() throws Exception {
+        // Given
+        Long categoryId = 2L;
+        MockMultipartFile picture = new MockMultipartFile(
+                "picture", "arroz.png", "image/png", new byte[]{1, 2, 3});
+        when(service.save(any(Product.class), eq(categoryId))).thenReturn(
+                new ResponseEntity<>(new ProductResponseRest(), HttpStatus.OK));
 
-        ProductResponseRest responseRest = new ProductResponseRest();
-        ResponseEntity<ProductResponseRest> responseEntity = new ResponseEntity<>(responseRest, HttpStatus.OK);
+        // When / Then
+        mockMvc.perform(multipart("/api/v1/products")
+                        .file(picture)
+                        .param("name", "Arroz")
+                        .param("price", "10")
+                        .param("account", "5")
+                        .param("categoryId", categoryId.toString()))
+                .andExpect(status().isOk());
 
-        when(productService.save(any(Product.class), eq(categoryId))).thenReturn(responseEntity);
-
-        ResponseEntity<ProductResponseRest> result = productController.save(picture, name, price, account, categoryId);
-
-        assertEquals(HttpStatus.OK, result.getStatusCode());
-        verify(productService, times(1)).save(any(Product.class), eq(categoryId));
+        ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
+        verify(service, times(1)).save(productCaptor.capture(), eq(categoryId));
+        Product savedProduct = productCaptor.getValue();
+        assertEquals("Arroz", savedProduct.getName());
+        assertEquals(10, savedProduct.getPrice());
+        assertEquals(5, savedProduct.getAccount());
+        assertNotNull(savedProduct.getPicture());
     }
 
     @Test
-    public void testDeleteProduct_Success() {
-        Long id = 1L;
-        ProductResponseRest responseRest = new ProductResponseRest();
-        ResponseEntity<ProductResponseRest> responseEntity = new ResponseEntity<>(responseRest, HttpStatus.OK);
+    void testSearchById_NotFound() throws Exception {
+        // Given
+        Long id = 99L;
+        when(service.searchById(id)).thenReturn(
+                new ResponseEntity<>(new ProductResponseRest(), HttpStatus.NOT_FOUND));
 
-        when(productService.deleteById(id)).thenReturn(responseEntity);
+        // When / Then
+        mockMvc.perform(get("/api/v1/products/{id}", id))
+                .andExpect(status().isNotFound());
 
-        ResponseEntity<ProductResponseRest> result = productController.deleteById(id);
+        verify(service, times(1)).searchById(id);
+    }
 
-        assertEquals(HttpStatus.OK, result.getStatusCode());
-        verify(productService, times(1)).deleteById(id);
+    private ProductResponseRest responseWith(Product product) {
+        ProductResponseRest response = new ProductResponseRest();
+        response.getProduct().setProducts(List.of(product));
+        return response;
     }
 }

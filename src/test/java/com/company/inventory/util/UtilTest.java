@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class UtilTest {
@@ -48,15 +48,9 @@ class UtilTest {
     @Test
     @DisplayName("CE Inválida: Entrada null en compresión y descompresión")
     void testCompressAndDecompressNullInput() {
-        // CE Inválida: Entrada null (evaluando comportamiento frente a excepciones no controladas)
-        // La clase no maneja la nulidad, por lo que arroja NullPointerException en setInput()
-        assertThrows(NullPointerException.class, () -> {
-            Util.compressZLib(null);
-        }, "Se esperaba NullPointerException al intentar comprimir un arreglo null");
-
-        assertThrows(NullPointerException.class, () -> {
-            Util.decompressZLib(null);
-        }, "Se esperaba NullPointerException al intentar descomprimir un arreglo null");
+        // CE Inválida: null se maneja de forma defensiva sin propagar una excepción.
+        assertNull(Util.compressZLib(null), "La compresión debe devolver null cuando la entrada es null");
+        assertNull(Util.decompressZLib(null), "La descompresión debe devolver null cuando la entrada es null");
     }
 
     @Test

@@ -27,7 +27,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TEST-04: Pruebas Unitarias con Mockito para ProductServiceImpl")
-class ProductServiceImplTest {
+public class ProductServiceImplTest {
 
     @Mock
     private IProductDao productDao;
@@ -55,7 +55,7 @@ class ProductServiceImplTest {
         product.setCategory(category);
         
         // Se asegura que al intentar descomprimir la imagen, la misma sea válida para evitar DataFormatException o NullPointerException
-        byte[] sampleImage = "fake-image-bytes".getBytes();
+        byte[] sampleImage = "test".getBytes();
         product.setPicture(Util.compressZLib(sampleImage));
     }
 

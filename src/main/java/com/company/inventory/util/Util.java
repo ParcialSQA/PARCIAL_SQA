@@ -10,6 +10,10 @@ public class Util {
 	
 	// compress the image bytes before storing it in the database
 		public static byte[] compressZLib(byte[] data) {
+			if (data == null) {
+				return null;
+			}
+
 			Deflater deflater = new Deflater();
 			deflater.setInput(data);
 			deflater.finish();
@@ -31,6 +35,10 @@ public class Util {
 
 		// uncompress the image bytes before returning it to the angular application
 		public static byte[] decompressZLib(byte[] data) {
+			if (data == null) {
+				return null;
+			}
+
 			Inflater inflater = new Inflater();
 			inflater.setInput(data);
 			ByteArrayOutputStream outputStream = new ByteArrayOutputStream(data.length);

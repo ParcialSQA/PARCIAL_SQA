@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -44,6 +45,23 @@ class ProductRestControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = standaloneSetup(controller).build();
+    }
+
+    @Test
+    void testSearchProducts_Success() throws Exception {
+        // Given
+        Product product = new Product();
+        product.setId(1L);
+        product.setName("Arroz");
+        when(service.search()).thenReturn(
+                new ResponseEntity<>(responseWith(product), HttpStatus.OK));
+
+        // When / Then
+        mockMvc.perform(get("/api/v1/products"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.product.products[0].name").value("Arroz"));
+
+        verify(service, times(1)).search();
     }
 
     @Test
@@ -121,6 +139,20 @@ class ProductRestControllerTest {
                 .andExpect(status().isNotFound());
 
         verify(service, times(1)).searchById(id);
+    }
+
+    @Test
+    void testDeleteProduct_Success() throws Exception {
+        // Given
+        Long id = 1L;
+        when(service.deleteById(id)).thenReturn(
+                new ResponseEntity<>(new ProductResponseRest(), HttpStatus.OK));
+
+        // When / Then
+        mockMvc.perform(delete("/api/v1/products/{id}", id))
+                .andExpect(status().isOk());
+
+        verify(service, times(1)).deleteById(id);
     }
 
     private ProductResponseRest responseWith(Product product) {
